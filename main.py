@@ -124,7 +124,7 @@ class ProbaDistrib:
 if __name__ == '__main__':
     dat = np.loadtxt(open("fanotot0.txt","r"))
     x = dat[:,0]
-    xshift=-np.min(x)*1.01
+    xshift=-40.0#np.min(x)*1.01
     x-=xshift
     pbd = np.power(dat[:,1],2)
     sort=np.argsort(x)
