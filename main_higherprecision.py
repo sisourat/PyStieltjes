@@ -1,19 +1,15 @@
-# This is a sample Python script.
-
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 import sys
+import getopt
 from mpmath import *
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.linalg import eigh_tridiagonal
-mp.dps = 250
 
-def stieltjes(x,pbd):
+# Usage: python3.10 main_higherprecision.py --nmax==25 --prec=1000 filename
 
-# Stieltjes Order
-    nmin = 11
-    nmax = 33
+def stieltjes(x,pbd,nmax):
+
+    nmin = 5
     qovmin = mpf(10e-50)
     overmax = mpf(1.0)
 
@@ -89,7 +85,7 @@ def stieltjes(x,pbd):
 #if the orthogonality is preserved for all orders, maxord is set to nmax
 
     maxord = nmax
-    for i in range(1,nmax):
+    for i in range(1,nmax-1):
         qnorm = mpf(0.0)
         qoverlap = mpf(0.0)
         for j in range(len(x)):
@@ -113,21 +109,11 @@ def stieltjes(x,pbd):
 
     min=5
     max=maxord
-    # xorder = []
-    # pbdorder = []
-
 
     xorder = np.zeros((max - 5, max - 5), dtype=np.longdouble)
     pbdorder = np.zeros((max - 5, max - 5), dtype=np.longdouble)
     for iord in range(min,max):
         print("Performs Stieltjes at order",iord)
-
-        # diag = []
-        # offdiag = []
-        # for i in range(iord):
-        #     diag.append(acoef[i+1])
-        # for i in range(1,iord):
-        #     offdiag.append(-sqrt(bcoef[i]))
         diag = np.zeros(iord,dtype=np.longdouble)
         diag[:iord] = acoef[1:iord+1]
 
@@ -141,17 +127,40 @@ def stieltjes(x,pbd):
 #calculate the gamma's by simple numerical differentiation at the middle
 # point of each [XNEW(I),ENEW(I+1)] interval
         for i in range(1,iord-min+2):
-#                 print(i,iord-min,0.5*(xnew[i]+xnew[i+1]))
              xorder[iord-min,i-1] = 0.5*(xnew[i]+xnew[i+1])
              pbdorder[iord-min,i-1] = 0.5*(pbdnew[i]+pbdnew[i+1])/(xnew[i]-xnew[i+1])
     return xorder, pbdorder
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    dat = np.loadtxt(open("fanotot0.txt","r"))
+
+# Stieltjes Order by default
+    nmax = 25
+# Precision by default
+    mp.dps = 1000
+
+    print('ARGV      :', sys.argv[1:])
+    options, remainder = getopt.getopt(sys.argv[1:], ':',   ['nmax=', 
+                                                             'prec=',
+                                                            ])
+
+    print('OPTIONS   :', options)
+    print('FILENAME  :', remainder[0])
+    fname = remainder[0]
+
+    for opt, arg in options:
+        if opt == '--nmax':
+           nmax = int(arg)
+        elif opt == '--prec':
+           prec = int(arg)
+           mp.dps = prec
+
+    print('PRECISION  :', prec)
+    dat = np.loadtxt(open(fname,"r"))
     x = dat[:,0]
-    xshift=35.0#np.min(x)*1.01
-    x+=xshift
-    pbd = np.power(dat[:,1],2)
+    xshift=np.min(x)-0.2
+    x-=xshift
+    pbd = np.power(dat[:,1],1)
     sort=np.argsort(x)
     x=x[sort]
     pbd=pbd[sort]
@@ -162,18 +171,14 @@ if __name__ == '__main__':
        xmp.append(mpf(x[i]))
        pbdmp.append(mpf(pbd[i]))
 
-    xst, pbdst = stieltjes(xmp,pbdmp)
+    print("")
+    xst, pbdst = stieltjes(xmp,pbdmp,nmax)
+    print("")
     for i in range(0,len(xst)):
-        xst[i] -= xshift
+        xst[i] += xshift
         xi = xst[i][0:i+1].astype(np.double)
         pbdi = pbdst[i][0:i+1].astype(np.double)
         sort = np.argsort(xi)
         xi = xi[sort]
         pbdi = pbdi[sort]
-#        print(i)
-#         pbd_new.print_pbd()
-#         print("")
-# #        print(i,pbd_new.moment(2))
-# #        print(i,pbd_new.entropy())
-        print(i,np.interp(0.0, xi, pbdi)*2.0*np.pi*27211)
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+        print("Order= ",i," G= ",np.interp(0.0, xi, pbdi)*2.0*np.pi*27211," meV")
